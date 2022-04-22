@@ -105,17 +105,19 @@ def have_word(words, word_set, _and=False):
     # one match
     for word in words:
         if word in word_set:
+            print(f'{word} is a match')
             return True
     return False
 
 def get_reply(msg):
     msg = msg.lower()
-    word_list = re.split('[;,.\s\n]', msg)
+    word_list = re.split('[;,.!?\s\n]', msg)
     word_set = set(word_list)
+    print(word_set)
     replymsg = list()
 
-    if msg == 'help': #TODO
-        replymsg.append((0, "Hi! I'm Derrick Lin.\n You can ask me about my experiences, projects, or skills."))
+    if msg == 'help':
+        replymsg.append((0, "Hi! I'm Derrick Lin.\nYou can ask me about my experiences, projects, or skills (in English)."))
         replymsg.append((0, "You can tell me your name, and I'll remember it.\nYou can also reply 'message count' to get the number of messages I've received from you."))
         return replymsg
 
@@ -136,28 +138,28 @@ def get_reply(msg):
         db_update('username', name)
         return replymsg
 
-    if have_word(('hi', 'hello', 'hey', 'yo'), word_set):
+    if have_word(['hi', 'hello', 'hey', 'yo'], word_set):
         name = db_get('username')
         if name:
             replymsg.append((0, f"Hi {name}, I'm Derrick. Ask me anything!"))
         else:
             replymsg.append((0, "Hello stranger! What's your name?"))
 
-    if have_word(('who'), word_set):
+    if have_word(['who'], word_set):
         replymsg.append((0, "My name is Derrick, currently a junior in National Taiwan University, majoring in Electrical Engineering."))
 
-    if have_word(('inter', 'internship', 'interns', 'internships', 'experience', 'work'), word_set):
-        replymsg.append((0, "I've interned in Rushpay, a startup focusing on providing a unified ordering & various payment systems for merchants.\nHere's their website: https://rushbit.net"))
+    if have_word(['intern', 'internship', 'interns', 'internships', 'experience', 'experiences', 'work'], word_set):
+        replymsg.append((0, "I've interned in Rushpay, a startup focusing on providing a unified interface for ordering and various payment systems for merchants.\nHere's their website: https://rushbit.net"))
         replymsg.append((0, "I worked as a backend developer there, and I've completed many full stack features in PHP/Laravel and JavaScript that were later on deployed to production, used by tens of thousands of customers."))
         replymsg.append((0, "I've also helped them automate their CI/CD pipeline with Gitlab Runner and Google Kubernetes Engine, making the deployment process become faster and more convenient."))
         return replymsg
 
-    if have_word(('project', 'projects'), word_set):
+    if have_word(['project', 'projects'], word_set):
         default = True
-        if have_word(('spotify'), word_set):
+        if have_word(['spotify'], word_set):
             replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can just try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
             default = False
-        if have_word(('glove'), word_set):
+        if have_word(['glove'], word_set):
             replymsg.append((0, "Here's the github repo of my glove project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
             default = False
         if default:
@@ -165,16 +167,17 @@ def get_reply(msg):
             replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (say 'spotify project' to learn more)"))
             replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (say 'glove project' to learn more)"))
 
-    if have_word(('personal', 'website'), word_set, _and=True) or have_word(('contact'), word_set):
+    if have_word(['personal', 'website'], word_set) or have_word(['contact'], word_set):
         replymsg.append((0, "My personal website is\nhttps://dlccyes.github.io/.\nYou can find lots of information about me here!"))
 
-    if have_word(('resume', 'cv'), word_set):
+    if have_word(['resume', 'cv'], word_set):
         replymsg.append((0, "Here goes my resume!\nhttps://dlccyes.github.io/resources/Derrick_Lin.pdf"))
 
-    if have_word(('skill', 'skills'), word_set):
-        replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:\n\
-            Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\
-            Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\nTools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
+    if have_word(['skill', 'skills', 'skillset'], word_set):
+        replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:"))
+        replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\
+Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\
+Tools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
 
     marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
     if "marsey" in word_set:
