@@ -58,11 +58,6 @@ def callback(): # webhook
     app.logger.info("💕💕💕")
     # handle webhook body
     try:
-        # get message count from database
-        msg_count = db_get('msg_count')
-        # update message count to database
-        db_update('msg_count', msg_count+1)
-
         # check time passed since last message
         time_now = datetime.now()
         last_msg_time_str = db_get('last_msg_time')
@@ -71,9 +66,15 @@ def callback(): # webhook
             time_passed = time_now - last_msg_time
             # 1 hr since last message -> reset memory
             # if time_passed.seconds > 3600:
-            if time_passed.seconds > 30:
+            if time_passed.seconds > 30: # for testing
                 db_update('username', None)
                 db_update('msg_count', 0)
+
+        # get message count from database
+        msg_count = db_get('msg_count')
+        # update message count to database
+        db_update('msg_count', msg_count+1)
+
         # update date & time of last message to database
         handler.handle(body, signature)
         db_update('last_msg_time', time_now.isoformat())
@@ -82,12 +83,10 @@ def callback(): # webhook
         abort(400)
     return 'OK'
 
-# 處理訊息
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent)
+# @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    # message = TextSendMessage(text=event.message.text)
-    
-    replymsg = get_reply(event.message.text)
+    replymsg = get_reply(event)
     print(replymsg)
     message = list()
     # max 5 replies
@@ -120,25 +119,36 @@ def have_word(words, word_set, _and=False):
     # one match
     for word in words:
         if word in word_set:
-            print(f'{word} is a match')
             return True
     return False
 
-def get_reply(msg):
-    msg = msg.lower()
-    word_list = re.split('[;,.!?\s\n]', msg)
-    word_set = set(word_list)
-    print(word_set)
+def get_marsey():
+    marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
+    return f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"
+
+def get_reply(event):
     replymsg = list()
+    
+    try:
+        msg = event.message.text
+        print(msg)
+        msg = msg.lower()
+        word_list = re.split('[;,.!?\s\n]', msg)
+        word_set = set(word_list)
+    except Exception as e:
+        print(e)
+        replymsg.append((1, get_marsey()))
+        return replymsg
 
     if msg == 'help':
         replymsg.append((0, "Hi! I'm Derrick Lin.\nYou can ask me about my experiences, projects, or skills (in English)."))
         replymsg.append((0, "You can tell me your name, and I'll remember it.\nYou can also reply 'message count' to get the number of messages I've received from you."))
+        replymsg.append((0, "btw I have a short memory, so I'll forget everything 1 hour after your last message."))
         return replymsg
 
     if msg == 'message count':
         msg_count = db_get('msg_count')
-        replymsg.append((0, f"You've sent me {msg_count} messages since I started counting it ☺️"))
+        replymsg.append((0, f"You've sent me {msg_count} since as far as I can recall ☺️"))
         return replymsg
 
     if "my name is" in msg:
@@ -182,8 +192,8 @@ def get_reply(msg):
             default = False
         if default:
             replymsg.append((0, "I've done several projects, including:"))
-            replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (say 'spotify project' to learn more)"))
-            replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (say 'glove project' to learn more)"))
+            replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (reply 'spotify project' to learn more)"))
+            replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (reply 'glove project' to learn more)"))
         return replymsg
 
     if have_word(['personal', 'website'], word_set) or have_word(['contact'], word_set):
@@ -201,16 +211,15 @@ def get_reply(msg):
 Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\n\
 Tools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
 
-    marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
     if "marsey" in word_set:
-        replymsg.append((1, f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"))
+        replymsg.append((1, get_marsey()))
 
     if not replymsg: # no matches
         random_reply = ["I know right?", "Everyone loves you ☺️"]
         if(random.randint(0, 1)):
             replymsg.append((0, random.choice(random_reply)))
         else:
-            replymsg.append((1, f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"))
+            replymsg.append((1, get_marsey()))
 
     # max 5 replies
     if len(replymsg) > 5:
