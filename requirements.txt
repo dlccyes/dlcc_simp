@@ -1,3 +1,6 @@
 Flask==2.1.1
 python-dotenv==0.20.0
 line-bot-sdk
+sqlalchemy
+psycopg2-binary
+alembic

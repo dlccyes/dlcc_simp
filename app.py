@@ -8,13 +8,34 @@ from linebot.exceptions import (
 )
 from linebot.models import *
 
-# get env from heroku config var
-from dotenv import load_dotenv
 import os
+
 import re
 import random
 
 app = Flask(__name__)
+
+# database
+from sqlalchemy import create_engine, select, MetaData, Table, insert, delete, update
+
+if not os.getenv('DATABASE_URL'):
+    # get variable from local .emv
+    # from config import *
+    from dotenv import load_dotenv
+    load_dotenv()
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
+engine = create_engine(DATABASE_URL)
+
+metadata = MetaData(bind=None)
+chat_t = Table(
+    'chat_t', 
+    metadata, 
+    autoload=True, 
+    autoload_with=engine
+)
+
 
 # Channel Access Token
 channel_access_token = os.getenv('LINE_BOT_CHANNEL_TOKEN')
@@ -61,6 +82,13 @@ def get_reply(msg):
     msg = msg.lower()
     msg_arr = re.split('[;,.\s\n]', msg)
     replymsg = list()
+
+    if msg == 'message count':
+        stmt = select([chat_t.c.msg_count])
+        conn = engine.connect()
+        results = conn.execute(stmt).fetchall()
+        print(results, type(results))
+        replymsg.append((0, str(results)))
 
     if "hello" in msg_arr:
         replymsg.append((0, "Hey there sweatie 💕\nAsk me who am I pls."))
