@@ -71,10 +71,10 @@ def get_reply(msg):
     if "project" in msg_arr:
         default = True
         if "spotify" in msg_arr and "project" in msg_arr:
-            replymsg.append((0, "You know what? You can just try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
+            replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can just try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
             default = False
         if "glove" in msg_arr:
-            replymsg.append((0, "Here's the github repo of the project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
+            replymsg.append((0, "Here's the github repo of my glove project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
             default = False
         if default:
             replymsg.append((0, "I've done several projects, including:"))
@@ -87,14 +87,14 @@ def get_reply(msg):
     if "resume" in msg_arr:
         replymsg.append((0, "Here goes my resume!\nhttps://dlccyes.github.io/resources/Derrick_Lin.pdf"))
 
-    marsey_pic = ["marseydead", "marseyagreefast", "marseylove", "marseyhearts"]
+    marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
     if "marsey" in msg_arr:
         # pic_id = random.randint(0, len(marsey_pic)-1)
         replymsg.append((1, f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"))
 
 
     if not replymsg: # no matches
-        random_reply = ["idk what you're saying lol", "I know right?", "Everyone loves you ☺️"]
+        random_reply = ["I know right?", "Everyone loves you ☺️"]
         if(random.randint(0, 1)):
             replymsg.append((0, random.choice(random_reply)))
         else:
