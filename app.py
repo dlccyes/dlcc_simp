@@ -99,10 +99,30 @@ def get_reply(msg):
 
     if msg == 'message count':
         msg_count = db_get('msg_count')
-        replymsg.append((0, str(msg_count)))
+        replymsg.append((0, f"You've sent me {msg_count} messages since I started counting it ☺️"))
+        return replymsg
+
+    if msg == 'help': #TODO
+        pass
+
+    if "my name is" in msg:
+        name = msg.replace("my name is ", "")
+        name = name.strip(' ')
+        if not name:
+            replymsg.append((0, "Uhh what 🤔🤔🤔\nWhat's your name again?"))
+            return replymsg
+        name = name[0].upper() + name[1:]
+        replymsg.append((0, f"Hi {name}, I'm Derrick. Nice to meet you!"))
+        replymsg.append((1, "https://rdrama.net/e/marseyblush.webp"))
+        db_update('username', name)
+        return replymsg
 
     if "hello" in msg_arr:
-        replymsg.append((0, "Hey there sweatie 💕\nAsk me who am I pls."))
+        name = db_get('username')
+        if name:
+            replymsg.append((0, f"Hi {name}, I'm Derrick. Ask me anything!"))
+        else:
+            replymsg.append((0, "Hello stranger! What's your name?"))
 
     if "who" in msg_arr:
         replymsg.append((0, "My name is Derrick, currently a junior in National Taiwan University, majoring in Electrical Engineering."))
