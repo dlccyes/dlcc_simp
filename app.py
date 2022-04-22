@@ -1,3 +1,4 @@
+from platform import platform
 from flask import Flask, request, abort
 
 from linebot import (
@@ -13,6 +14,7 @@ import os
 import re
 import random
 from datetime import datetime
+import json
 
 app = Flask(__name__)
 
@@ -25,18 +27,6 @@ if not os.getenv('DATABASE_URL'):
     from dotenv import load_dotenv
     load_dotenv()
 
-DATABASE_URL = os.getenv('DATABASE_URL')
-DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
-engine = create_engine(DATABASE_URL)
-conn = engine.connect()
-
-metadata = MetaData(bind=None)
-chat_t = Table(
-    'chat_t', 
-    metadata, 
-    autoload=True, 
-    autoload_with=engine
-)
 
 testing = False
 if os.getenv('TEST') == 'true': 
@@ -49,7 +39,6 @@ line_bot_api = LineBotApi(channel_access_token)
 channel_secret = os.getenv('LINE_BOT_CHANNEL_SECRET')
 handler = WebhookHandler(channel_secret)
 
-# 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback(): # line webhook
     print(f'💕💕{request}')
@@ -62,38 +51,21 @@ def callback(): # line webhook
     app.logger.info("Request body: " + body)
     # handle webhook body
     try:
-        # check time passed since last message
-        time_now = datetime.now()
-        last_msg_time_str = db_get('last_msg_time')
-        if last_msg_time_str:
-            last_msg_time = datetime.fromisoformat(last_msg_time_str)
-            time_passed = time_now - last_msg_time
-            # 1 hr since last message -> reset memory
-            if testing:
-                memory_time_out = 30
-            else:
-                memory_time_out = 3600
-            if time_passed.seconds > memory_time_out:
-                db_update('username', None)
-                db_update('msg_count', 0)
-
-        # get message count from database
-        msg_count = db_get('msg_count')
-        # update message count to database
-        db_update('msg_count', msg_count+1)
-
-        # update date & time of last message to database
         handler.handle(body, signature)
-        db_update('last_msg_time', time_now.isoformat())
 
     except InvalidSignatureError:
         abort(400)
     return 'OK'
 
-@handler.add(MessageEvent)
 # @handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent)
 def handle_message(event):
-    replymsg = get_reply(event)
+    rqst = json.loads(str(event))
+    print(rqst)
+    handle_reqest = RequestController(rqst)
+
+    replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
+
     print(replymsg)
     message = list()
     # max 5 replies
@@ -104,135 +76,191 @@ def handle_message(event):
             message.append(ImageSendMessage(original_content_url=msg[1], preview_image_url=msg[1]))
     line_bot_api.reply_message(event.reply_token, message)
 
-def db_get(clmn):
-    """get value of clmn from database"""
-    stmt = select(chat_t.c[clmn]).where(chat_t.c.identity=='main')
-    results = conn.execute(stmt).fetchall()
-    return results[0][0]
+class RequestController():
+    def __init__(self, request):
+        DATABASE_URL = os.getenv('DATABASE_URL')
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
+        engine = create_engine(DATABASE_URL)
+        self.conn = engine.connect()
 
-def db_update(clmn, val):
-    """update value of clmn to database"""
-    stmt = chat_t.update().where(chat_t.c.identity=='main').values({clmn:val})
-    conn.execute(stmt)
+        metadata = MetaData(bind=None)
+        self.chat_t = Table(
+            'chat_t', 
+            metadata, 
+            autoload=True, 
+            autoload_with=engine
+        )
 
-def have_word(words, word_set, _and=False):
-    "if a word in words is in word_set, return True"
-    # all match
-    if _and:
-        for word in words:
-            if word not in word_set:
-                return False
-        return True
-    # one match
-    for word in words:
-        if word in word_set:
+        self.identity = request['source']['userId']
+        if not self.db_get('id'): # no entry for this identity
+            # TODO
+            if request['replyToken']: # line
+                platform = 0
+            else: # web
+                platform = 1
+            stmt = self.chat_t.insert().values(identity=self.identity, platform=platform)
+            self.conn.execute(stmt)
+        self.platform = self.db_get('platform')
+
+        self.word_set = set()
+        self.msg = None
+        if 'text' in request['message']:
+            self.msg = request['message']['text']
+
+        # check time passed since last message
+        time_now = datetime.now()
+        last_msg_time_str = self.db_get('last_msg_time')
+        if last_msg_time_str:
+            last_msg_time = datetime.fromisoformat(last_msg_time_str)
+            time_passed = time_now - last_msg_time
+            # 1 hr since last message -> reset memory
+            if testing:
+                memory_time_out = 30
+            else:
+                memory_time_out = 3600
+            if time_passed.seconds > memory_time_out:
+                self.db_update('username', None)
+                self.db_update('msg_count', 0)
+        # update date & time of last message to database
+        self.db_update('last_msg_time', time_now.isoformat())
+
+        # get message count from database
+        msg_count = self.db_get('msg_count')
+        if not msg_count:
+            msg_count = 0
+        # update message count to database
+        self.db_update('msg_count', msg_count+1)
+
+    def db_get(self, clmn):
+        """get value of clmn from database"""
+        stmt = select(self.chat_t.c[clmn]).where(self.chat_t.c.identity==self.identity)
+        results = self.conn.execute(stmt).fetchall()
+        if not results or not results[0]: return False
+        return results[0][0]
+
+    def db_update(self, clmn, val):
+        """update value of clmn to database"""
+        stmt = self.chat_t.update().where(self.chat_t.c.identity==self.identity).values({clmn:val})
+        self.conn.execute(stmt)
+
+    def have_word(self, words, _and=False):
+        "if a word in words is in word_set, return True"
+        # all match
+        if _and:
+            for word in words:
+                if word not in self.word_set:
+                    return False
             return True
-    return False
+        # one match
+        for word in words:
+            if word in self.word_set:
+                return True
+        return False
 
-def get_marsey():
-    marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
-    return f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"
+    def get_marsey(self):
+        marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
+        return f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"
 
-def get_reply(event):
-    replymsg = list()
-    
-    try:
-        msg = event.message.text
-        print(msg)
-        msg = msg.lower()
-        word_list = re.split('[;,.!?\s\n]', msg)
-        word_set = set(word_list)
-    except Exception as e:
-        print(e)
-        replymsg.append((1, get_marsey()))
-        return replymsg
-
-    if msg == 'help':
-        replymsg.append((0, "Hi! I'm Derrick Lin.\nYou can ask me about my experiences, projects, or skills (in English)."))
-        replymsg.append((0, "You can tell me your name, and I'll remember it.\nYou can also reply 'message count' to get the number of messages I've received from you."))
-        replymsg.append((0, "btw I have a short memory, so I'll forget everything 1 hour after your last message."))
-        return replymsg
-
-    if msg == 'message count':
-        msg_count = db_get('msg_count')
-        replymsg.append((0, f"You've sent me {msg_count} since as far as I can recall ☺️"))
-        return replymsg
-
-    if "my name is" in msg:
-        name = msg.replace("my name is", "")
-        name = name.strip(' ')
-        if not name:
-            replymsg.append((0, "Uhh what 🤔🤔🤔\nWhat's your name again?"))
+    def get_reply(self, msg=None):
+        replymsg = list()
+        if not msg: msg = self.msg 
+        try:
+            #msg = event.message.text
+            print(msg)
+            msg = msg.lower()
+            word_list = re.split('[;,.!?\s\n]', msg)
+            self.word_set = set(word_list)
+        except Exception as e:
+            print(e)
+            replymsg.append((1, self.get_marsey()))
             return replymsg
-        name = name[0].upper() + name[1:]
-        replymsg.append((0, f"Hi {name}, I'm Derrick. Nice to meet you!"))
-        replymsg.append((1, "https://rdrama.net/e/marseyblush.webp"))
-        db_update('username', name)
+
+        if msg == 'help':
+            replymsg.append((0, "Hi! I'm Derrick Lin.\nYou can ask me about my experiences, projects, or skills (in English)."))
+            replymsg.append((0, "You can tell me your name, and I'll remember it.\nYou can also reply 'message count' to get the number of messages I've received from you."))
+            replymsg.append((0, "btw I have a short memory, so I'll forget everything 1 hour after your last message."))
+            return replymsg
+
+        if msg == 'message count':
+            msg_count = self.db_get('msg_count')
+            replymsg.append((0, f"You've sent me {msg_count} since as far as I can recall ☺️"))
+            return replymsg
+
+        if "my name is" in msg:
+            name = msg.replace("my name is", "")
+            name = name.strip(' ')
+            if not name:
+                replymsg.append((0, "Uhh what 🤔🤔🤔\nWhat's your name again?"))
+                return replymsg
+            name = name[0].upper() + name[1:]
+            replymsg.append((0, f"Hi {name}, I'm Derrick. Nice to meet you!"))
+            replymsg.append((1, "https://rdrama.net/e/marseyblush.webp"))
+            self.db_update('username', name)
+            return replymsg
+
+        if self.have_word(['hi', 'hello', 'hey', 'yo']):
+            name = self.db_get('username')
+            if name:
+                replymsg.append((0, f"Hi {name}, I'm Derrick. Ask me anything!"))
+            else:
+                replymsg.append((0, "Hello stranger! What's your name?"))
+
+        if self.have_word(['who']):
+            replymsg.append((0, "My name is Derrick, currently a junior in National Taiwan University, majoring in Electrical Engineering."))
+
+        if self.have_word(['intern', 'internship', 'interns', 'internships', 'experience', 'experiences', 'work']):
+            replymsg.append((0, "I've interned in Rushpay, a startup focusing on providing a unified interface for ordering and various payment systems for merchants.\nHere's their website: https://rushbit.net"))
+            replymsg.append((0, "I worked as a backend developer there, and I've completed many full stack features in PHP/Laravel and JavaScript that were later on deployed to production, used by tens of thousands of customers."))
+            replymsg.append((0, "I've also helped them automate their CI/CD pipeline with Gitlab Runner and Google Kubernetes Engine, making the deployment process become faster and more convenient."))
+            return replymsg
+
+        if self.have_word(['project', 'projects']):
+            default = True
+            if self.have_word(['spotify']):
+                replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
+                replymsg.append((0, "Here's a screenshot of the website."))
+                replymsg.append((1, "https://i.imgur.com/fKjx5lW.png"))
+                replymsg.append((0, "Beautiful, isn't it?"))
+                default = False
+            if self.have_word(['glove']):
+                replymsg.append((0, "Here's the github repo of my glove project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
+                default = False
+            if default:
+                replymsg.append((0, "I've done several projects, including:"))
+                replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (reply 'spotify project' to learn more)"))
+                replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (reply 'glove project' to learn more)"))
+            return replymsg
+
+        if self.have_word(['personal', 'website']) or self.have_word(['contact']):
+            replymsg.append((0, "My personal website is\nhttps://dlccyes.github.io/.\nYou can find lots of information about me here!"))
+        
+        if self.have_word(['github']):
+            replymsg.append((0, "My github account is\nhttps://github.com/dlccyes.\nYou can also go to my personal website to learn more about me!\nhttps://dlccyes.github.io/"))
+
+        if self.have_word(['resume', 'cv']):
+            replymsg.append((0, "Here goes my resume!\nhttps://dlccyes.github.io/resources/Derrick_Lin.pdf"))
+
+        if self.have_word(['skill', 'skills', 'skillset']):
+            replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:"))
+            replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\n\
+    Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\n\
+    Tools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
+
+        if self.have_word(['marsey']):
+            replymsg.append((1, self.get_marsey()))
+
+        if not replymsg: # no matches
+            random_reply = ["I know right?", "Everyone loves you ☺️"]
+            if(random.randint(0, 1)):
+                replymsg.append((0, random.choice(random_reply)))
+            else:
+                replymsg.append((1, self.get_marsey()))
+
+        # max 5 replies
+        if len(replymsg) > 5:
+            replymsg = ["Sorry, please ask something else 🥲"]
+
         return replymsg
-
-    if have_word(['hi', 'hello', 'hey', 'yo'], word_set):
-        name = db_get('username')
-        if name:
-            replymsg.append((0, f"Hi {name}, I'm Derrick. Ask me anything!"))
-        else:
-            replymsg.append((0, "Hello stranger! What's your name?"))
-
-    if have_word(['who'], word_set):
-        replymsg.append((0, "My name is Derrick, currently a junior in National Taiwan University, majoring in Electrical Engineering."))
-
-    if have_word(['intern', 'internship', 'interns', 'internships', 'experience', 'experiences', 'work'], word_set):
-        replymsg.append((0, "I've interned in Rushpay, a startup focusing on providing a unified interface for ordering and various payment systems for merchants.\nHere's their website: https://rushbit.net"))
-        replymsg.append((0, "I worked as a backend developer there, and I've completed many full stack features in PHP/Laravel and JavaScript that were later on deployed to production, used by tens of thousands of customers."))
-        replymsg.append((0, "I've also helped them automate their CI/CD pipeline with Gitlab Runner and Google Kubernetes Engine, making the deployment process become faster and more convenient."))
-        return replymsg
-
-    if have_word(['project', 'projects'], word_set):
-        default = True
-        if have_word(['spotify'], word_set):
-            replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
-            replymsg.append((0, "Here's a screenshot of the website."))
-            replymsg.append((1, "https://i.imgur.com/fKjx5lW.png"))
-            replymsg.append((0, "Beautiful, isn't it?"))
-            default = False
-        if have_word(['glove'], word_set):
-            replymsg.append((0, "Here's the github repo of my glove project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
-            default = False
-        if default:
-            replymsg.append((0, "I've done several projects, including:"))
-            replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (reply 'spotify project' to learn more)"))
-            replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (reply 'glove project' to learn more)"))
-        return replymsg
-
-    if have_word(['personal', 'website'], word_set) or have_word(['contact'], word_set):
-        replymsg.append((0, "My personal website is\nhttps://dlccyes.github.io/.\nYou can find lots of information about me here!"))
-    
-    if have_word(['github'], word_set):
-        replymsg.append((0, "My github account is\nhttps://github.com/dlccyes.\nYou can also go to my personal website to learn more about me!\nhttps://dlccyes.github.io/"))
-
-    if have_word(['resume', 'cv'], word_set):
-        replymsg.append((0, "Here goes my resume!\nhttps://dlccyes.github.io/resources/Derrick_Lin.pdf"))
-
-    if have_word(['skill', 'skills', 'skillset'], word_set):
-        replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:"))
-        replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\n\
-Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\n\
-Tools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
-
-    if "marsey" in word_set:
-        replymsg.append((1, get_marsey()))
-
-    if not replymsg: # no matches
-        random_reply = ["I know right?", "Everyone loves you ☺️"]
-        if(random.randint(0, 1)):
-            replymsg.append((0, random.choice(random_reply)))
-        else:
-            replymsg.append((1, get_marsey()))
-
-    # max 5 replies
-    if len(replymsg) > 5:
-        replymsg = ["Sorry, please ask something else 🥲"]
-
-    return replymsg
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))

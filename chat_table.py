@@ -11,3 +11,4 @@ class chat_t(Base):
     username =  Column(String(50))
     msg_count = Column(Integer)
     last_msg_time = Column(String(50))
+    platform = Column(Integer) # 0: line, 1: web

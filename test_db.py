@@ -21,8 +21,10 @@ chat_t = Table(
 conn = engine.connect()
 
 # stmt = select(chat_t.c.msg_count)
-stmt = select(chat_t.c.msg_count).where(chat_t.c.identity=='main')
+stmt = select(chat_t.c['id']).where(chat_t.c.identity=='mains')
 results = conn.execute(stmt).fetchall()
+print(results)
+sys.exit(0)
 msg_count = results[0][0]
 
 stmt = chat_t.update().where(chat_t.c.identity=='main').values(msg_count=msg_count+1)
@@ -33,7 +35,6 @@ results = conn.execute(stmt).fetchall()
 msg_count = results[0][0]
 print(msg_count)
 # print(a)
-# sys.exit(0)
 
 
 # results = conn.execute(stmt).fetchall()
