@@ -38,6 +38,10 @@ chat_t = Table(
     autoload_with=engine
 )
 
+testing = False
+if os.getenv('TEST') == 'true': 
+    testing = True
+
 # Channel Access Token
 channel_access_token = os.getenv('LINE_BOT_CHANNEL_TOKEN')
 line_bot_api = LineBotApi(channel_access_token)
@@ -47,15 +51,15 @@ handler = WebhookHandler(channel_secret)
 
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
-def callback(): # webhook
+def callback(): # line webhook
+    print(f'💕💕{request}')
+    print(f'🥺🥺🥺{request.json}')
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
     # get request body as text
     body = request.get_data(as_text=True)
     # text = request.json['events'][0]['message']['text']
-    print(f'🥺🥺🥺{request.json}')
     app.logger.info("Request body: " + body)
-    app.logger.info("💕💕💕")
     # handle webhook body
     try:
         # check time passed since last message
@@ -65,8 +69,11 @@ def callback(): # webhook
             last_msg_time = datetime.fromisoformat(last_msg_time_str)
             time_passed = time_now - last_msg_time
             # 1 hr since last message -> reset memory
-            # if time_passed.seconds > 3600:
-            if time_passed.seconds > 30: # for testing
+            if testing:
+                memory_time_out = 30
+            else:
+                memory_time_out = 3600
+            if time_passed.seconds > memory_time_out:
                 db_update('username', None)
                 db_update('msg_count', 0)
 
