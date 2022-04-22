@@ -12,6 +12,7 @@ import os
 
 import re
 import random
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -62,6 +63,20 @@ def callback(): # webhook
         msg_count = db_get('msg_count')
         # update message count to database
         db_update('msg_count', msg_count+1)
+
+        # check time passed since last message
+        time_now = datetime.now()
+        last_msg_time_str = db_get('last_msg_time')
+        if last_msg_time_str:
+            last_msg_time = datetime.fromisoformat(last_msg_time_str)
+            time_passed = time_now - last_msg_time
+            # 1 hr since last message -> reset memory
+            # if time_passed.seconds > 3600:
+            if time_passed.seconds > 30:
+                db_update('username', None)
+                db_update('msg_count', 0)
+        # update date & time of last message to database
+        db_update('last_msg_time', time_now.isoformat())
 
     except InvalidSignatureError:
         abort(400)
