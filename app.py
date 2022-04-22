@@ -27,6 +27,7 @@ if not os.getenv('DATABASE_URL'):
 DATABASE_URL = os.getenv('DATABASE_URL')
 DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 engine = create_engine(DATABASE_URL)
+conn = engine.connect()
 
 metadata = MetaData(bind=None)
 chat_t = Table(
@@ -35,7 +36,6 @@ chat_t = Table(
     autoload=True, 
     autoload_with=engine
 )
-
 
 # Channel Access Token
 channel_access_token = os.getenv('LINE_BOT_CHANNEL_TOKEN')
@@ -58,6 +58,11 @@ def callback(): # webhook
     # handle webhook body
     try:
         handler.handle(body, signature)
+        # get message count from database
+        msg_count = db_get('msg_count')
+        # update message count to database
+        db_update('msg_count', msg_count+1)
+
     except InvalidSignatureError:
         abort(400)
     return 'OK'
@@ -78,17 +83,23 @@ def handle_message(event):
             message.append(ImageSendMessage(original_content_url=msg[1], preview_image_url=msg[1]))
     line_bot_api.reply_message(event.reply_token, message)
 
+def db_get(clmn):
+    stmt = select(chat_t.c[clmn]).where(chat_t.c.identity=='main')
+    results = conn.execute(stmt).fetchall()
+    return results[0][0]
+
+def db_update(clmn, val):
+    stmt = chat_t.update().where(chat_t.c.identity=='main').values({clmn:val})
+    conn.execute(stmt)
+
 def get_reply(msg):
     msg = msg.lower()
     msg_arr = re.split('[;,.\s\n]', msg)
     replymsg = list()
 
     if msg == 'message count':
-        stmt = select([chat_t.c.msg_count])
-        conn = engine.connect()
-        results = conn.execute(stmt).fetchall()
-        print(results, type(results))
-        replymsg.append((0, str(results)))
+        msg_count = db_get('msg_count')
+        replymsg.append((0, str(msg_count)))
 
     if "hello" in msg_arr:
         replymsg.append((0, "Hey there sweatie 💕\nAsk me who am I pls."))
