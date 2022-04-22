@@ -157,7 +157,10 @@ def get_reply(msg):
     if have_word(['project', 'projects'], word_set):
         default = True
         if have_word(['spotify'], word_set):
-            replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can just try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
+            replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
+            replymsg.append((0, "Here's a screenshot of the website."))
+            replymsg.append((1, "https://i.imgur.com/fKjx5lW.png"))
+            replymsg.append((0, "Beautiful, isn't it?"))
             default = False
         if have_word(['glove'], word_set):
             replymsg.append((0, "Here's the github repo of my glove project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
@@ -166,17 +169,21 @@ def get_reply(msg):
             replymsg.append((0, "I've done several projects, including:"))
             replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (say 'spotify project' to learn more)"))
             replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (say 'glove project' to learn more)"))
+        return replymsg
 
     if have_word(['personal', 'website'], word_set) or have_word(['contact'], word_set):
         replymsg.append((0, "My personal website is\nhttps://dlccyes.github.io/.\nYou can find lots of information about me here!"))
+    
+    if have_word(['github'], word_set):
+        replymsg.append((0, "My github account is\nhttps://github.com/dlccyes.\nYou can also go to my personal website to learn more about me!\nhttps://dlccyes.github.io/"))
 
     if have_word(['resume', 'cv'], word_set):
         replymsg.append((0, "Here goes my resume!\nhttps://dlccyes.github.io/resources/Derrick_Lin.pdf"))
 
     if have_word(['skill', 'skills', 'skillset'], word_set):
         replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:"))
-        replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\
-Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\
+        replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\n\
+Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\n\
 Tools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
 
     marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
