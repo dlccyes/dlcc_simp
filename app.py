@@ -84,29 +84,48 @@ def handle_message(event):
     line_bot_api.reply_message(event.reply_token, message)
 
 def db_get(clmn):
+    """get value of clmn from database"""
     stmt = select(chat_t.c[clmn]).where(chat_t.c.identity=='main')
     results = conn.execute(stmt).fetchall()
     return results[0][0]
 
 def db_update(clmn, val):
+    """update value of clmn to database"""
     stmt = chat_t.update().where(chat_t.c.identity=='main').values({clmn:val})
     conn.execute(stmt)
 
+def have_word(words, word_set, _and=False):
+    "if a word in words is in word_set, return True"
+    # all match
+    if _and:
+        for word in words:
+            if word not in word_set:
+                return False
+        return True
+    # one match
+    for word in words:
+        if word in word_set:
+            return True
+    return False
+
 def get_reply(msg):
     msg = msg.lower()
-    msg_arr = re.split('[;,.\s\n]', msg)
+    word_list = re.split('[;,.\s\n]', msg)
+    word_set = set(word_list)
     replymsg = list()
+
+    if msg == 'help': #TODO
+        replymsg.append((0, "Hi! I'm Derrick Lin.\n You can ask me about my experiences, projects, or skills."))
+        replymsg.append((0, "You can tell me your name, and I'll remember it.\nYou can also reply 'message count' to get the number of messages I've received from you."))
+        return replymsg
 
     if msg == 'message count':
         msg_count = db_get('msg_count')
         replymsg.append((0, f"You've sent me {msg_count} messages since I started counting it ☺️"))
         return replymsg
 
-    if msg == 'help': #TODO
-        pass
-
     if "my name is" in msg:
-        name = msg.replace("my name is ", "")
+        name = msg.replace("my name is", "")
         name = name.strip(' ')
         if not name:
             replymsg.append((0, "Uhh what 🤔🤔🤔\nWhat's your name again?"))
@@ -117,22 +136,28 @@ def get_reply(msg):
         db_update('username', name)
         return replymsg
 
-    if "hello" in msg_arr:
+    if have_word(('hi', 'hello', 'hey', 'yo'), word_set):
         name = db_get('username')
         if name:
             replymsg.append((0, f"Hi {name}, I'm Derrick. Ask me anything!"))
         else:
             replymsg.append((0, "Hello stranger! What's your name?"))
 
-    if "who" in msg_arr:
+    if have_word(('who'), word_set):
         replymsg.append((0, "My name is Derrick, currently a junior in National Taiwan University, majoring in Electrical Engineering."))
 
-    if "project" in msg_arr:
+    if have_word(('inter', 'internship', 'interns', 'internships', 'experience', 'work'), word_set):
+        replymsg.append((0, "I've interned in Rushpay, a startup focusing on providing a unified ordering & various payment systems for merchants.\nHere's their website: https://rushbit.net"))
+        replymsg.append((0, "I worked as a backend developer there, and I've completed many full stack features in PHP/Laravel and JavaScript that were later on deployed to production, used by tens of thousands of customers."))
+        replymsg.append((0, "I've also helped them automate their CI/CD pipeline with Gitlab Runner and Google Kubernetes Engine, making the deployment process become faster and more convenient."))
+        return replymsg
+
+    if have_word(('project', 'projects'), word_set):
         default = True
-        if "spotify" in msg_arr and "project" in msg_arr:
+        if have_word(('spotify'), word_set):
             replymsg.append((0, "I've made a full stack Spotify stat website, and you know what? You can just try it yourself!\nHere goes the link to the working site.\nhttps://playlastify.herokuapp.com/"))
             default = False
-        if "glove" in msg_arr:
+        if have_word(('glove'), word_set):
             replymsg.append((0, "Here's the github repo of my glove project, containing a detailed description and some demo videos!\nhttps://github.com/alwaysmle/Glove-Mouse"))
             default = False
         if default:
@@ -140,17 +165,20 @@ def get_reply(msg):
             replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (say 'spotify project' to learn more)"))
             replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (say 'glove project' to learn more)"))
 
-    if "personal" in msg_arr and "website" in msg_arr:
-        replymsg.append((0, "My personal website is\nhttps://dlccyes.github.io/"))
+    if have_word(('personal', 'website'), word_set, _and=True) or have_word(('contact'), word_set):
+        replymsg.append((0, "My personal website is\nhttps://dlccyes.github.io/.\nYou can find lots of information about me here!"))
 
-    if "resume" in msg_arr:
+    if have_word(('resume', 'cv'), word_set):
         replymsg.append((0, "Here goes my resume!\nhttps://dlccyes.github.io/resources/Derrick_Lin.pdf"))
 
-    marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
-    if "marsey" in msg_arr:
-        # pic_id = random.randint(0, len(marsey_pic)-1)
-        replymsg.append((1, f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"))
+    if have_word(('skill', 'skills'), word_set):
+        replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:\n\
+            Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\
+            Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\nTools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
 
+    marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
+    if "marsey" in word_set:
+        replymsg.append((1, f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"))
 
     if not replymsg: # no matches
         random_reply = ["I know right?", "Everyone loves you ☺️"]
