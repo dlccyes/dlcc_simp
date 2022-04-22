@@ -58,7 +58,6 @@ def callback(): # webhook
     app.logger.info("💕💕💕")
     # handle webhook body
     try:
-        handler.handle(body, signature)
         # get message count from database
         msg_count = db_get('msg_count')
         # update message count to database
@@ -76,6 +75,7 @@ def callback(): # webhook
                 db_update('username', None)
                 db_update('msg_count', 0)
         # update date & time of last message to database
+        handler.handle(body, signature)
         db_update('last_msg_time', time_now.isoformat())
 
     except InvalidSignatureError:
