@@ -43,17 +43,21 @@ handler = WebhookHandler(channel_secret)
 def index():
     return render_template('index.html')
 
-@app.route("/testing", methods=['POST'])
-def test():
-    print(f'{request}')
-    rqst = request.get_json()
-    print(f'💕💕{rqst}')
-    handle_reqest = RequestController(rqst)
-    replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
-    return {'replies': replymsg}
+@app.route("/getWebResponse", methods=['POST'])
+def web_response():
+    try:
+        print(f'{request}')
+        rqst = request.get_json()
+        print(f'💕💕{rqst}')
+        handle_reqest = RequestController(rqst)
+        replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
+        return {'success':1, 'replies': replymsg}
+    except Exception as e:
+        print(e)
+        return {'success':0}
 
 @app.route("/callback", methods=['POST'])
-def callback(): # line webhook
+def line_response(): # line webhook
     print(f'{request}')
     print(f'🥺🥺🥺{request.json}')
     # get X-Line-Signature header value
@@ -73,22 +77,27 @@ def callback(): # line webhook
 # @handler.add(MessageEvent, message=TextMessage)
 @handler.add(MessageEvent)
 def handle_message(event):
-    rqst = json.loads(str(event))
-    print(rqst)
-    handle_reqest = RequestController(rqst)
-
-    replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
-
-    print(replymsg)
     message = list()
-    # max 5 replies
-    #TODO
-    # TemplateSendMessage
-    for msg in replymsg:
-        if msg[0] == 0: # text
-            message.append(TextSendMessage(text=msg[1]))
-        elif msg[0] == 1: # image
-            message.append(ImageSendMessage(original_content_url=msg[1], preview_image_url=msg[1]))
+    try: 
+        rqst = json.loads(str(event))
+        print(rqst)
+        handle_reqest = RequestController(rqst)
+
+        replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
+
+        print(replymsg)
+        # max 5 replies
+        #TODO
+        # TemplateSendMessage
+        for msg in replymsg:
+            if msg[0] == 0: # text
+                message.append(TextSendMessage(text=msg[1]))
+            elif msg[0] == 1: # image
+                message.append(ImageSendMessage(original_content_url=msg[1], preview_image_url=msg[1]))
+    except Exception as e:
+        print(e)
+        message.append(TextSendMessage(text="I'm sleeping right now 😴😴\nPlease try again later."))
+
     line_bot_api.reply_message(event.reply_token, message)
 
 class RequestController():
@@ -259,9 +268,7 @@ class RequestController():
 
         if self.have_word(['skill', 'skills', 'skillset']):
             replymsg.append((0, "Through my internship experience, the projects I've made and the courses I've taken, I've acquired many skills, including:"))
-            replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\n\
-    Frameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\n\
-    Tools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
+            replymsg.append((0, "Languages: Python, C/C++, JavaScript/HTML/CSS, PHP, SQL, RISC-V Assembly, Verilog, R, MATLAB\n\nFrameworks and Libraries: jQuery, Laravel, Django, PyTorch\n\nTools: Git, Linux, MySQL, MongoDB, Docker, K8s, GCP, Heroku"))
 
         if self.have_word(['marsey']):
             replymsg.append((1, self.get_marsey()))

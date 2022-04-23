@@ -1,19 +1,27 @@
 body {
   background-color: #000;
   color: #fff;
+  position: absolute;
+  left: 55%;
+  transform: translate(-55%, 0%);
+  width: 700px;
+  margin: auto;
+  margin-top: 2%;
+  font-size: 18px;
+  line-height: 1.5em;
 }
 button, #lastfm_gettoptracks {
-  background-color: #1db955;
+  background-color: #40bc06;
+  color: #fff;
   border-radius: 500px;
   transition-duration: .3s;
-  font-size: 14px;
-  line-height: 1;
+  font-size: 16px;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
   border: 1px solid transparent;
   padding: 10px;
-  margin: 1%;
+  margin: 2%;
 }
 button:hover {
   background-color: #42d275;
@@ -28,4 +36,19 @@ a {
 }
 a:hover {
   text-decoration: underline;
+}
+input[type=text] {
+  width: 70%;
+  border-radius: 20px;
+  padding: 10px;
+  font-family: segoe print;
+  font-size: 15px;
+}
+#reply_area {
+  margin: 2%;
+}
+#reference {
+  color: #ffeaeae0;
+  border-left: solid 2px #ffddddb5;
+  padding-left: 14px;
 }
