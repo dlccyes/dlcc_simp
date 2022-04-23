@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>dlcc simp</title>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" href="https://i.imgur.com/mypR8sN.png">
+</head>
+<h1>Add the bot as friend and start chatting!</h1>
+<div id="content">
+<p>The bot's id is <span id="copy">@337hejyi</span> <button id="copyBtn" type="button" onclick="copyEvent('copy')">cp</button></p>
+
+
+
+<p>You can also add the bot with this QR Code.</p>
+<img src="https://qr-official.line.me/sid/L/337hejyi.png" alt="QR Code">
+
+</div>
+<script>
+function copyEvent(id)
+{
+  var str = document.getElementById(id);
+  window.getSelection().selectAllChildren(str);
+  document.execCommand("Copy")
+}
+</script>

@@ -2,15 +2,21 @@ body {
   background-color: #000;
   color: #fff;
   position: absolute;
-  left: 55%;
-  transform: translate(-55%, 0%);
+  left: 50%;
+  transform: translate(-50%, 0%);
   width: 700px;
   margin: auto;
   margin-top: 2%;
   font-size: 18px;
-  line-height: 1.5em;
+  line-height: 2em;
 }
-button, #lastfm_gettoptracks {
+#content {
+  padding: 5px 20px;
+}
+img {
+  border-radius: 15px;
+}
+.btn {
   background-color: #40bc06;
   color: #fff;
   border-radius: 500px;
@@ -23,10 +29,10 @@ button, #lastfm_gettoptracks {
   padding: 10px;
   margin: 2%;
 }
-button:hover {
+.btn:hover {
   background-color: #42d275;
 }
-button:active {
+.btn:active {
   opacity: 0.8;
 }
 a {
@@ -51,4 +57,16 @@ input[type=text] {
   color: #ffeaeae0;
   border-left: solid 2px #ffddddb5;
   padding-left: 14px;
+}
+#copy {
+  font-family: Hack;
+}
+#copyBtn {
+  font-family: Hack;
+  background: #ffd7d7d1;
+  border: 0;
+  padding: 2px;
+  border-radius: 5px;
+  color: #000;
+  cursor: pointer;
 }

@@ -40,8 +40,12 @@ channel_secret = os.getenv('LINE_BOT_CHANNEL_SECRET')
 handler = WebhookHandler(channel_secret)
 
 @app.route("/")
-def index():
+def index_page():
     return render_template('index.html')
+
+@app.route("/line")
+def add_line_page():
+    return render_template('line.html')
 
 @app.route("/getWebResponse", methods=['POST'])
 def web_response():
