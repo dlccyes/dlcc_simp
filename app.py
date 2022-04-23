@@ -1,5 +1,5 @@
 from platform import platform
-from flask import Flask, request, abort
+from flask import Flask, request, abort, render_template, url_for, redirect
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -39,9 +39,25 @@ line_bot_api = LineBotApi(channel_access_token)
 channel_secret = os.getenv('LINE_BOT_CHANNEL_SECRET')
 handler = WebhookHandler(channel_secret)
 
+@app.route("/")
+def index():
+    return render_template('index.html')
+
+@app.route("/testing")
+def test():
+    print(f'💕💕{request}')
+    print(f'💕💕{request.get_json()}')
+    print(request.GET.get('message'))
+    # print(f'💕💕{request.data}')
+    rqst = request.data
+    handle_reqest = RequestController(rqst)
+    replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
+    return {'replies': replymsg}
+    # return redirect(url_for('index'))
+
 @app.route("/callback", methods=['POST'])
 def callback(): # line webhook
-    print(f'💕💕{request}')
+    print(f'{request}')
     print(f'🥺🥺🥺{request.json}')
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
@@ -69,6 +85,8 @@ def handle_message(event):
     print(replymsg)
     message = list()
     # max 5 replies
+    #TODO
+    # TemplateSendMessage
     for msg in replymsg:
         if msg[0] == 0: # text
             message.append(TextSendMessage(text=msg[1]))
@@ -90,8 +108,10 @@ class RequestController():
             autoload=True, 
             autoload_with=engine
         )
-
-        self.identity = request['source']['userId']
+        if 'source' in request and 'userId' in request['source']:
+            self.identity = request['source']['userId']
+        else:
+            self.identity = 'web'
         if not self.db_get('id'): # no entry for this identity
             # TODO
             if request['replyToken']: # line
@@ -104,7 +124,7 @@ class RequestController():
 
         self.word_set = set()
         self.msg = None
-        if 'text' in request['message']:
+        if 'message' in request and 'text' in request['message']:
             self.msg = request['message']['text']
 
         # check time passed since last message
@@ -183,7 +203,7 @@ class RequestController():
 
         if msg == 'message count':
             msg_count = self.db_get('msg_count')
-            replymsg.append((0, f"You've sent me {msg_count} since as far as I can recall ☺️"))
+            replymsg.append((0, f"You've sent me {msg_count} messages as far as I can recall ☺️"))
             return replymsg
 
         if "my name is" in msg:

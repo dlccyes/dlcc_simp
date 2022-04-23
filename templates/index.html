@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>dlcc simp</title>
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <link rel="icon" href="https://i.imgur.com/mypR8sN.png">
+</head>
+<body>  
+<h1>Want to know more about me?</h1>
+<div>
+  <p>this is originally for 2022 line tech fresh intern apply take home project</p>
+</div>
+<br>
+<div id="input_area">
+  <input type="text" id="textInput" placeholder="Ask something!"></input>
+  <button id='getReply'>ask</button>
+</div>
+<div id="reply_area"></div>
+</body>
+</html>
+<script>
+function getReply(msg){ //to backend
+    objData = {
+      'message': {},
+    };
+    objData['message']['text'] = msg;
+    $.ajax({
+        type: 'GET',
+        dataType: 'json',
+        contentType: 'application/json',
+        data: JSON.stringify(objData),
+        url: "/testing",
+        success: function(result){
+            // data = result['data'];
+            console.log(result);
+            $('#reply_area').html(result['replies']);
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            alert("Something's wrong. Please relogin, wait a while or try another playlist.");
+            console.log('error ' + textStatus);
+            console.log(jqXHR);
+        },
+    });
+}
+$(document).ready(function(){
+  $('#getReply').click(function(){
+    msg = $('#textInput').val();
+    getReply(msg); //auth code flow step 1
+      // parseCode();
+  });
+});
+</script>
