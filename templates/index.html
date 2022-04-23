@@ -7,47 +7,89 @@
   <link rel="icon" href="https://i.imgur.com/mypR8sN.png">
 </head>
 <body>  
-<h1>Want to know more about me?</h1>
-<div>
-  <p>this is originally for 2022 line tech fresh intern apply take home project</p>
-</div>
-<br>
-<div id="input_area">
-  <input type="text" id="textInput" placeholder="Ask something!"></input>
-  <button id='getReply'>ask</button>
-</div>
+  <h1>Want to know more about me?</h1>
+  <div>
+    <p>this is originally for 2022 line tech fresh intern apply take home project</p>
+  </div>
+  <br>
+  <div id="input_area">
+    <input type="text" id="textInput" placeholder="Ask something!"></input>
+    <button id='getReply'>ask</button>
+    <!-- <p id="loading">thinking what to reply ....</p> -->
+  </div>
 <div id="reply_area"></div>
 </body>
 </html>
 <script>
+function EnterExec(jq, callback){ //press enter to execute
+  $(jq).keypress(function(e){
+    if(e.which == 13){
+      callback();
+    }
+  });
+}
+function withLoading(callback){ //loading animation
+  try{
+    $('#reply_area').html("<p>thinking what to reply ...</p>");
+    callback();
+  }catch{
+    $('#reply_area').html('');
+  }
+}
+function linkify(inputText) { // replace link with <a> tag
+  // from https://stackoverflow.com/a/49634926/15493213
+  var replacedText, replacePattern1, replacePattern2, replacePattern3;
+  //URLs starting with http://, https://, or ftp://
+  replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+  replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank">$1</a>');
+  return replacedText;
+}
 function getReply(msg){ //to backend
-    objData = {
-      'message': {},
-    };
-    objData['message']['text'] = msg;
-    $.ajax({
-        type: 'GET',
-        dataType: 'json',
-        contentType: 'application/json',
-        data: JSON.stringify(objData),
-        url: "/testing",
-        success: function(result){
-            // data = result['data'];
-            console.log(result);
-            $('#reply_area').html(result['replies']);
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            alert("Something's wrong. Please relogin, wait a while or try another playlist.");
-            console.log('error ' + textStatus);
-            console.log(jqXHR);
-        },
-    });
+  var objData = {
+    'message': {},
+  };
+  objData['message']['text'] = msg;
+  $.ajax({
+    type: 'POST',
+    dataType: 'json',
+    contentType: 'application/json',
+    data: JSON.stringify(objData),
+    url: "/testing",
+    success: function(result){
+      console.log(result);
+      replies = result['replies'];
+      reply_html = '';
+      for (var reply of replies) {
+        reply_type = reply[0];
+        reply_content = reply[1];
+        // console.log(reply);
+        if (reply_type == 0){ // text
+          reply_html += '<p>' + linkify(reply_content) + '</p>';
+        } else if (reply_type == 1){ // image
+          reply_html += '<img src="' + reply_content + '" width=auto height=300><br>';
+        }
+      }
+      console.log(reply_html);
+      $('#reply_area').html(reply_html);
+    },
+    error: function(jqXHR, textStatus, errorThrown) {
+      console.log('error ' + textStatus);
+      console.log(jqXHR);
+    },
+  });
 }
 $(document).ready(function(){
+  EnterExec('#textInput', function(){
+    withLoading(function(){
+      msg = $('#textInput').val();
+      getReply(msg);
+    });
+  });
   $('#getReply').click(function(){
-    msg = $('#textInput').val();
-    getReply(msg); //auth code flow step 1
-      // parseCode();
+    withLoading(function(){
+      msg = $('#textInput').val();
+      getReply(msg);
+    });
   });
 });
 </script>

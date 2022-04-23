@@ -43,17 +43,14 @@ handler = WebhookHandler(channel_secret)
 def index():
     return render_template('index.html')
 
-@app.route("/testing")
+@app.route("/testing", methods=['POST'])
 def test():
-    print(f'💕💕{request}')
-    print(f'💕💕{request.get_json()}')
-    print(request.GET.get('message'))
-    # print(f'💕💕{request.data}')
-    rqst = request.data
+    print(f'{request}')
+    rqst = request.get_json()
+    print(f'💕💕{rqst}')
     handle_reqest = RequestController(rqst)
     replymsg = handle_reqest.get_reply(msg=handle_reqest.msg)
     return {'replies': replymsg}
-    # return redirect(url_for('index'))
 
 @app.route("/callback", methods=['POST'])
 def callback(): # line webhook
@@ -114,7 +111,7 @@ class RequestController():
             self.identity = 'web'
         if not self.db_get('id'): # no entry for this identity
             # TODO
-            if request['replyToken']: # line
+            if 'replyToken' in request: # line
                 platform = 0
             else: # web
                 platform = 1
@@ -207,7 +204,7 @@ class RequestController():
             return replymsg
 
         if "my name is" in msg:
-            name = msg.replace("my name is", "")
+            name = msg[msg.find("my name is")+len("my name is"):]
             name = name.strip(' ')
             if not name:
                 replymsg.append((0, "Uhh what 🤔🤔🤔\nWhat's your name again?"))
