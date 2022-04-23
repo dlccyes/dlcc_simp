@@ -11,7 +11,8 @@ A bot that knows everything (the professional aspects) about me, and it's happy 
 ## How to use It?
 Click [here](https://dlccsimp.herokuapp.com/) to use the web version. 
 
-Click [here](https://dlccsimp.herokuapp.com/line) to use the line bot version.
+Click [here](https://dlccsimp.herokuapp.com/line) to see how to use the line bot version. Or use this QR Code directly.
+![](https://qr-official.line.me/sid/L/337hejyi.png)
 
 Enter `help` to know what to ask!
 ## Origin
