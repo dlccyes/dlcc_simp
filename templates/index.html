@@ -58,7 +58,7 @@ function getReply(msg){ //to backend
           reply_type = reply[0];
           reply_content = reply[1];
           // console.log(reply);
-          if (reply_type == 0){ // text
+          if (reply_type == 0 || reply_type == 2){ // text
             reply_html += '<p>' + htmlifly(reply_content) + '</p>';
           } else if (reply_type == 1){ // image
             reply_html += '<img src="' + reply_content + '" width=auto height=300><br>';

@@ -1,4 +1,5 @@
 from platform import platform
+from secrets import choice
 from flask import Flask, request, abort, render_template, url_for, redirect
 
 from linebot import (
@@ -91,13 +92,13 @@ def handle_message(event):
 
         print(replymsg)
         # max 5 replies
-        #TODO
-        # TemplateSendMessage
         for msg in replymsg:
             if msg[0] == 0: # text
                 message.append(TextSendMessage(text=msg[1]))
             elif msg[0] == 1: # image
                 message.append(ImageSendMessage(original_content_url=msg[1], preview_image_url=msg[1]))
+            elif msg[0] == 2: # others # template button for line
+                message.append(msg[1])
     except Exception as e:
         print(e)
         message.append(TextSendMessage(text="I'm sleeping right now 😴😴\nPlease try again later."))
@@ -140,6 +141,7 @@ class RequestController():
         # check time passed since last message
         time_now = datetime.now()
         last_msg_time_str = self.db_get('last_msg_time')
+        self.fresh = False
         if last_msg_time_str:
             last_msg_time = datetime.fromisoformat(last_msg_time_str)
             time_passed = time_now - last_msg_time
@@ -151,6 +153,7 @@ class RequestController():
             if time_passed.seconds > memory_time_out:
                 self.db_update('username', None)
                 self.db_update('msg_count', 0)
+                self.fresh = True
         # update date & time of last message to database
         self.db_update('last_msg_time', time_now.isoformat())
 
@@ -209,7 +212,36 @@ class RequestController():
             replymsg.append((0, "Hi! I'm Derrick Lin.\nYou can ask me about my experiences, projects, or skills (in English)."))
             replymsg.append((0, "You can tell me your name, and I'll remember it.\nYou can also reply 'message count' to get the number of messages I've received from you."))
             replymsg.append((0, "btw I have a short memory, so I'll forget everything 1 hour after your last message."))
+            if self.platform == 0:
+                template = TemplateSendMessage(
+                    alt_text='Buttons template',
+                    template=ButtonsTemplate(
+                        title="Here are some sample topics.",
+                        text="Choose one if you don't know what to ask:",
+                        actions=[
+                            MessageTemplateAction(
+                                label='???',
+                                text=random.choice(['Hi!', 'Who are you?'])
+                            ),
+                            MessageTemplateAction(
+                                label='Work Experience',
+                                text='Do you have any work experience?',
+                            ),
+                            MessageTemplateAction(
+                                label='Project',
+                                text='What projects have you done?',
+                            ),
+                            MessageTemplateAction(
+                                label='Skills',
+                                text='What technical skills do you have?',
+                            ),               
+                        ]
+                    )
+                )
+                replymsg.append((2, template))
             return replymsg
+        elif self.fresh:
+            replymsg.append((0, "It's been a while! Remember, you can reply 'help' to know what to ask."))
 
         if msg == 'message count':
             msg_count = self.db_get('msg_count')
@@ -257,8 +289,29 @@ class RequestController():
                 default = False
             if default:
                 replymsg.append((0, "I've done several projects, including:"))
-                replymsg.append((0, "1. A full stack website analyzing and visualizing your playlists (reply 'spotify project' to learn more)"))
-                replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML (reply 'glove project' to learn more)"))
+                replymsg.append((0, "1. A full stack website analyzing and visualizing your Spotify playlists"))
+                replymsg.append((0, "2. A glove that can replace your mouse and keyboard using Arduino, Python and ML"))
+                if self.platform == 0:
+                    template = TemplateSendMessage(
+                        alt_text='Buttons template',
+                        template=ButtonsTemplate(
+                            title='Which do you want to learn?',
+                            text='Please select one:',
+                            actions=[
+                                MessageTemplateAction(
+                                    label='Spotify Project',
+                                    text='Spotify Project'
+                                ),
+                                MessageTemplateAction(
+                                    label='Glove Project',
+                                    text='Glove Project'
+                                ),
+                            ]
+                        )
+                    )
+                    replymsg.append((2, template))
+                elif self.platform == 1:
+                    replymsg.append((0, 'Reply "spotify project" to learn more about my Spotify project.\nReply "glove project" to learn more about my glove project.'))
             return replymsg
 
         if self.have_word(['personal', 'website']) or self.have_word(['contact']):
