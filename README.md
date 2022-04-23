@@ -2,6 +2,11 @@
 A bot that knows everything (the professional aspects) about me, and it's happy to tell you all of it, as long as you ask the correct questions.
 
 ## Demo
+### line version
+![](/resources/line_demo.webp)
+
+### web version
+![](/resources/web_demo.webp)
 
 ## How to use It?
 Click [here](https://dlccsimp.herokuapp.com/) to use the web version. 
