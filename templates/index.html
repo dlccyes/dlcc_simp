@@ -19,22 +19,53 @@
   <div id="input_area">
     <input type="text" id="textInput" placeholder="Ask me anything!"></input>
     <button class="btn" id='getReply'>ask</button>
-    <!-- <p id="loading">thinking what to reply ....</p> -->
+    <br>
+    <button class="btn" id='getRandomReply'>I'm Feeling Lucky</button>
   </div>
   <div id="reply_area"></div>
 </div>
 </body>
 </html>
 <script>
-function requestHandler(callback){ //loading animation
+var processing = false;
+function requestHandler(callback){
+  if(processing){ // no double request
+    return;
+  }
   try{
     $('#reply_area').html("<p>thinking what to reply ...</p>");
-    callback();
+    $('#getReply').attr('disabled', true);
+    $('#getRandomReply').attr('disabled', true);
+    callback(function(){
+      // go back to initial state
+      processing = false;
+      $('#textInput').val('');
+      $('#reply_area').html(reply_html);
+      $('#getReply').attr('disabled', false);
+      $('#getRandomReply').attr('disabled', false);
+    });
   }catch{
     $('#reply_area').html('');
   }
 }
-function getReply(msg){ //to backend
+function getRandomReply(callback){
+  msgPool = [
+    'help',
+    'Hi', 
+    'Hello', 
+    'Who are you?', 
+    'Do you have any experience?', 
+    'What projects have you done?',
+    'What skills do you have?',
+    'message count',
+    'I love you'
+  ];
+  msg = msgPool[Math.floor(Math.random() * msgPool.length)];
+  $('#textInput').val(msg);
+  getReply(msg, callback);
+}
+function getReply(msg, callback){ //to backend
+  processing = true;
   var objData = {
     'message': {},
   };
@@ -66,8 +97,7 @@ function getReply(msg){ //to backend
         }
       }
       console.log(reply_html);
-      $('#textInput').val('');
-      $('#reply_area').html(reply_html);
+      callback();
     },
     error: function(jqXHR, textStatus, errorThrown) {
       console.log('error ' + textStatus);
@@ -77,15 +107,20 @@ function getReply(msg){ //to backend
 }
 $(document).ready(function(){
   EnterExec('#textInput', function(){
-    requestHandler(function(){
+    requestHandler(function(callback){
       msg = $('#textInput').val();
-      getReply(msg);
+      getReply(msg, callback);
     });
   });
   $('#getReply').click(function(){
-    requestHandler(function(){
+    requestHandler(function(callback){
       msg = $('#textInput').val();
-      getReply(msg);
+      getReply(msg, callback);
+    });
+  });
+  $('#getRandomReply').click(function(){
+    requestHandler(function(callback){
+      getRandomReply(callback);
     });
   });
 });
