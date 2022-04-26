@@ -194,6 +194,10 @@ class RequestController():
         marsey_pic = ["marseyagreefast", "marseyblowkiss", "marseyhearts", "marseyblush", "marseymarseylove"]
         return f"https://rdrama.net/e/{random.choice(marsey_pic)}.webp"
 
+    def get_random_text_reply(self):
+        random_reply = ["I know right?", "Everyone loves you ☺️"]
+        return random.choice(random_reply)
+
     def get_reply(self, msg=None):
         replymsg = list()
         if not msg: msg = self.msg 
@@ -221,7 +225,7 @@ class RequestController():
                         actions=[
                             MessageTemplateAction(
                                 label='???',
-                                text=random.choice(['Hi!', 'Who are you?'])
+                                text=random.choice(['Hi!', 'Hello?', 'Hey there sweetie 💕', 'Who are you?',])
                             ),
                             MessageTemplateAction(
                                 label='Work Experience',
@@ -331,9 +335,8 @@ class RequestController():
             replymsg.append((1, self.get_marsey()))
 
         if not replymsg: # no matches
-            random_reply = ["I know right?", "Everyone loves you ☺️"]
             if(random.randint(0, 1)):
-                replymsg.append((0, random.choice(random_reply)))
+                replymsg.append((0, self.get_random_text_reply()))
             else:
                 replymsg.append((1, self.get_marsey()))
 
