@@ -113,7 +113,7 @@ At the project root, run
 alembic upgrade head
 ```
 
-You can learn more about SQLAlchemy & Alembic [here](https://dlccyes.github.io/CollegeNotes/OtherNotes/Programming/SQLAlchemy.html).
+You can learn more about SQLAlchemy & Alembic [here](https://dlccyes.github.io/CollegeNotes/OtherNotes/Software%20Development/SQLAlchemy.html).
 
 ### Deploy the bot
 Now the bot is ready! 
